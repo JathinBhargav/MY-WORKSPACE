@@ -1,0 +1,6 @@
+{
+  "name": "Workspace Mail AI Task Sync",
+  "description": "AI-powered assistant that summarizes emails, manages calendar events & tasks, compiles meet notes, and synchronizes Google Workspace apps (Docs, Sheets, Slides, Forms, Keep).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,41 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // Pulls transaction routing port 6543
+  directUrl = env("DIRECT_URL")     // Pulls session migration port 5432
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model SyncTask {
+  id        String   @id @default(uuid())
+  userId    String   // Stores blind, salted SHA-256 user hashes 
+  title     String   // Stores encrypted hexadecimal AES-256-GCM cipher text
+  notes     String?  // Stores encrypted hexadecimal AES-256-GCM cipher text
+  urgency   String   // Plain text level strings ('URGENT', 'HIGH', etc.) for rapid dashboard filtering
+  dueDate   DateTime
+  createdAt DateTime @default(now())
+
+  // Configures lightning-fast indexing structures for your Overview tracking components
+  @@index([userId])
+  @@index([urgency])
+  @@index([userId, urgency])
+}
+
+model UserProfile {
+  id                 String   @id
+  googleAccessToken  String?
+  googleRefreshToken String?
+  createdAt          DateTime @default(now())
+}
+
+model SynchronizedFile {
+  id        String   @id @default(uuid())
+  userId    String
+  fileName  String   // e.g., "Task Sheets-Tracker"
+  fileType  String   // "DOCUMENT" or "SPREADSHEET"
+  googleUrl String   // To store the real https://docs.google.com/... URL
+  updatedAt DateTime @updatedAt
+}
+

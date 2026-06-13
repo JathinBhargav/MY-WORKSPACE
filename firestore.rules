@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE SECURITY HIGHLIGHTS HELPER PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn();
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- ENTITY SHAPE VALIDATION BLUEPRINTS ---
+    function isValidUser(data) {
+      return data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid;
+    }
+
+    function isValidTask(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 256;
+    }
+
+    function isValidEvent(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 256;
+    }
+
+    function isValidNote(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 256;
+    }
+
+    function isValidMeeting(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.meetingTitle is string && data.meetingTitle.size() <= 256;
+    }
+
+    function isValidFeedback(data) {
+      return data.id is string && data.id.size() <= 128;
+    }
+
+    // --- SECURED ROUTE AND USER SEGMENTS ---
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isVerifiedUser() && isValidUser(incoming());
+      allow delete: if false;
+
+      // Nested collection - Tasks
+      match /tasks/{taskId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerifiedUser() && isValidId(taskId) && isValidTask(incoming());
+        allow update: if isOwner(userId) && isVerifiedUser() && isValidId(taskId) && isValidTask(incoming()) && (
+          // Immortal fields checking for identity safeguarding
+          incoming().id == existing().id
+        );
+        allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(taskId);
+      }
+
+      // Nested collection - Events
+      match /events/{eventId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerifiedUser() && isValidId(eventId) && isValidEvent(incoming());
+        allow update: if isOwner(userId) && isVerifiedUser() && isValidId(eventId) && isValidEvent(incoming()) && (
+          incoming().id == existing().id
+        );
+        allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(eventId);
+      }
+
+      // Nested collection - Notes
+      match /notes/{noteId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerifiedUser() && isValidId(noteId) && isValidNote(incoming());
+        allow update: if isOwner(userId) && isVerifiedUser() && isValidId(noteId) && isValidNote(incoming()) && (
+          incoming().id == existing().id
+        );
+        allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(noteId);
+      }
+
+      // Nested collection - Meetings
+      match /meetings/{meetingId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerifiedUser() && isValidId(meetingId) && isValidMeeting(incoming());
+        allow update: if isOwner(userId) && isVerifiedUser() && isValidId(meetingId) && isValidMeeting(incoming()) && (
+          incoming().id == existing().id
+        );
+        allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(meetingId);
+      }
+
+      // Nested collection - Feedbacks
+      match /feedbacks/{feedbackId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerifiedUser() && isValidId(feedbackId) && isValidFeedback(incoming());
+        allow update: if isOwner(userId) && isVerifiedUser() && isValidId(feedbackId) && isValidFeedback(incoming()) && (
+          incoming().id == existing().id
+        );
+        allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(feedbackId);
+      }
+    }
+  }
+}
